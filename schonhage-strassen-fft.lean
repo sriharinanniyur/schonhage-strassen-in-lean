@@ -119,7 +119,7 @@ lemma decompose_sum (A b K : Nat) (hK : 0 < K) :
     exact Or.inl ( by rw [ mul_comm ] )
 
 -- ====================================================================
--- CommRing-level NTT lemmas (unchanged)
+-- CommRing-level NTT lemmas
 -- ====================================================================
 
 lemma ntt_pointwise_product_eq_conv {R : Type*} [CommRing R]
@@ -291,7 +291,7 @@ lemma ntt_full_chain_comm_ring {R : Type*} [CommRing R]
     grind +splitImp
 
 -- ====================================================================
--- DECOMPOSE / NEGACYCLIC BOUNDS (unchanged)
+-- DECOMPOSE / NEGACYCLIC BOUNDS
 -- ====================================================================
 
 lemma decompose_digit_lt (A b K : ℕ) (hb : 0 < b) (j : Fin K) (hj : j.val < K - 1) :
@@ -408,11 +408,7 @@ lemma h_neg_helper (K : ℕ) (C F : ℤ) (j : Fin K)
   have hK_eq : (↑(K - 1 - j.val) : ℤ) + ↑(j.val + 1) = ↑K := by push_cast; omega
   nlinarith [sq_nonneg C]
 
--- ====================================================================
--- CLAUDE
--- ====================================================================
 
--- Simpler proof using existing pattern from old file:
 lemma base_isUnit_zmod' (BASE n' : ℕ) (hn'_pos : 0 < n') :
     IsUnit ((BASE : ZMod (fermat_ext BASE n'))) := by
   have h_neg_one : (BASE : ZMod (fermat_ext BASE n')) ^ n' = -1 :=
