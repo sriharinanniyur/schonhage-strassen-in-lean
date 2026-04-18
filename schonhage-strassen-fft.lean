@@ -8,13 +8,13 @@ set_option maxHeartbeats 3200000
 -- DEFINITIONS
 -- =====================================================================
 
-def fermat_ext (b n : Nat) : Nat := b ^ n + 1
+def F (b n : Nat) : Nat := b ^ n + 1
 
-lemma fermat_ext_pos (b n : Nat) : 0 < fermat_ext b n := by
-  unfold fermat_ext; positivity
+lemma F_pos (b n : Nat) : 0 < F b n := by
+  unfold F; positivity
 
-instance fermat_ext_neZero (b n : Nat) : NeZero (fermat_ext b n) :=
-  ⟨Nat.pos_iff_ne_zero.mp (fermat_ext_pos b n)⟩
+instance F_neZero (b n : Nat) : NeZero (F b n) :=
+  ⟨Nat.pos_iff_ne_zero.mp (F_pos b n)⟩
 
 def decompose (A b : Nat) (K : Nat) : Fin K → Nat :=
   fun j =>
@@ -36,15 +36,9 @@ def FFT {k : Nat} {F : Nat} [NeZero F]
   | 0     => x
   | k'+1  =>
     let evens : Fin (2^k') → ZMod F :=
-      fun j => x ⟨2 * j.val, by
-        have hj : j.val < 2^k' := j.isLt
-        have hp : (2:Nat)^(k'+1) = 2 * 2^k' := by simp [pow_succ 2 k']; ring
-        omega⟩
+      fun j => x (Fin.mk (2 * j.val) (by grind))
     let odds : Fin (2^k') → ZMod F :=
-      fun j => x ⟨2 * j.val + 1, by
-        have hj : j.val < 2^k' := j.isLt
-        have hp : (2:Nat)^(k'+1) = 2 * 2^k' := by simp [pow_succ 2 k']; ring
-        omega⟩
+      fun j => x (Fin.mk (2 * j.val + 1) (by grind))
     let E := FFT evens (omega^2)
     let O := FFT odds  (omega^2)
     fun i =>
@@ -83,29 +77,29 @@ lemma exists_suitable_n' (n : Nat) (hn : good_n n) (h_large : ¬(n < 16)) :
   · exact Or.inl ( dvd_trans ( pow_dvd_pow _ ( Nat.min_le_left _ _ ) ) ( Classical.choose_spec hn |>.2 ) )
 
 
-lemma fermat_ext_eq_pow_pow (BASE K M : Nat) :
-    fermat_ext BASE (K * M) = (BASE ^ M) ^ K + 1 := by
+lemma F_eq_pow_pow (BASE K M : Nat) :
+    F BASE (K * M) = (BASE ^ M) ^ K + 1 := by
   rw [ ← pow_mul, mul_comm ]; rfl
 
-lemma base_pow_eq_neg_one_mod_fermat_ext (BASE n : Nat) :
-    (BASE : ZMod (fermat_ext BASE n)) ^ n = -1 := by
+lemma base_pow_eq_neg_one_mod_F (BASE n : Nat) :
+    (BASE : ZMod (F BASE n)) ^ n = -1 := by
   rw [ eq_neg_iff_add_eq_zero ];
   norm_cast;
   erw [ ZMod.natCast_eq_zero_iff ];
   rfl
 
 lemma theta_pow_2K_eq_one (BASE n K : Nat) (hK : 0 < K) (hKdvd : K ∣ n) :
-    ((BASE : ZMod (fermat_ext BASE n)) ^ (n / K)) ^ (2 * K) = 1 := by
-  have hTHETAK : ((BASE : ZMod (fermat_ext BASE n)) ^ (n / K)) ^ K = -1 := by
-    rw [ ← pow_mul, Nat.div_mul_cancel hKdvd, base_pow_eq_neg_one_mod_fermat_ext ];
+    ((BASE : ZMod (F BASE n)) ^ (n / K)) ^ (2 * K) = 1 := by
+  have hTHETAK : ((BASE : ZMod (F BASE n)) ^ (n / K)) ^ K = -1 := by
+    rw [ ← pow_mul, Nat.div_mul_cancel hKdvd, base_pow_eq_neg_one_mod_F ];
   linear_combination' hTHETAK * hTHETAK
 
 lemma theta_pow_K_eq_neg_one (BASE n K : Nat) (hK : 0 < K) (hKdvd : K ∣ n) :
-    ((BASE : ZMod (fermat_ext BASE n)) ^ (n / K)) ^ K = -1 := by
-  rw [ ← pow_mul, Nat.div_mul_cancel hKdvd, base_pow_eq_neg_one_mod_fermat_ext ]
+    ((BASE : ZMod (F BASE n)) ^ (n / K)) ^ K = -1 := by
+  rw [ ← pow_mul, Nat.div_mul_cancel hKdvd, base_pow_eq_neg_one_mod_F ]
 
 lemma omega_pow_K_eq_one (BASE n K : Nat) (hK : 0 < K) (hKdvd : K ∣ n) :
-    (((BASE : ZMod (fermat_ext BASE n)) ^ (n / K)) ^ 2) ^ K = 1 := by
+    (((BASE : ZMod (F BASE n)) ^ (n / K)) ^ 2) ^ K = 1 := by
   rw [ ← pow_mul, mul_comm 2 K, pow_mul, theta_pow_K_eq_neg_one BASE n K hK hKdvd ]; ring
 
 lemma decompose_sum (A b K : Nat) (hK : 0 < K) :
@@ -376,10 +370,10 @@ lemma negacyclic_coeff_neg_bound (K : ℕ) (hK : 0 < K)
   · gcongr with x y ; split_ifs <;> first | linarith | simp_all +decide [ Nat.mod_eq_of_lt ] ;
     exact mul_nonneg ( ha _ ) ( hb _ )
 
-lemma fermat_ext_gt_K_mul_sq (BASE k M : ℕ) (n' : ℕ)
+lemma F_gt_K_mul_sq (BASE k M : ℕ) (n' : ℕ)
     (hBASE : 2 ≤ BASE) (hM : 0 < M)
     (hn' : n' ≥ 2 * M + k) :
-    2 ^ k * (BASE ^ M) ^ 2 < fermat_ext BASE n' := by
+    2 ^ k * (BASE ^ M) ^ 2 < F BASE n' := by
   have h_exp_ge : BASE^n' ≥ BASE^(2*M + k) := by
     exact Nat.pow_le_pow_right ( by linarith ) hn';
   have h_exp_ge_simplified : BASE^n' ≥ (BASE^M)^2 * 2^k := by
@@ -410,18 +404,18 @@ lemma h_neg_helper (K : ℕ) (C F : ℤ) (j : Fin K)
 
 
 lemma base_isUnit_zmod' (BASE n' : ℕ) (hn'_pos : 0 < n') :
-    IsUnit ((BASE : ZMod (fermat_ext BASE n'))) := by
-  have h_neg_one : (BASE : ZMod (fermat_ext BASE n')) ^ n' = -1 :=
-    base_pow_eq_neg_one_mod_fermat_ext BASE n'
-  have h_neg_unit : IsUnit ((BASE : ZMod (fermat_ext BASE n')) ^ n') := by
+    IsUnit ((BASE : ZMod (F BASE n'))) := by
+  have h_neg_one : (BASE : ZMod (F BASE n')) ^ n' = -1 :=
+    base_pow_eq_neg_one_mod_F BASE n'
+  have h_neg_unit : IsUnit ((BASE : ZMod (F BASE n')) ^ n') := by
     rw [h_neg_one]; exact isUnit_one.neg
   exact isUnit_of_dvd_unit (dvd_pow_self _ hn'_pos.ne') h_neg_unit
 
--- 2^k is a unit in ZMod (fermat_ext BASE n') when BASE is even and n' ≥ 1.
+-- 2^k is a unit in ZMod (F BASE n') when BASE is even and n' ≥ 1.
 lemma K_isUnit_zmod (BASE n' k : ℕ) (hBASE_even : Even BASE) (hn'_pos : 0 < n') :
-    IsUnit ((2 ^ k : ℕ) : ZMod (fermat_ext BASE n')) := by
-  have hF_odd : ¬ (2 ∣ fermat_ext BASE n') := by
-    unfold fermat_ext
+    IsUnit ((2 ^ k : ℕ) : ZMod (F BASE n')) := by
+  have hF_odd : ¬ (2 ∣ F BASE n') := by
+    unfold F
     intro ⟨c, hc⟩
     have hBASE_dvd : 2 ∣ BASE ^ n' := by
       obtain ⟨r, hr⟩ := hBASE_even
@@ -429,7 +423,7 @@ lemma K_isUnit_zmod (BASE n' k : ℕ) (hBASE_even : Even BASE) (hn'_pos : 0 < n'
     obtain ⟨d, hd⟩ := hBASE_dvd
     have : 2 ∣ 1 := ⟨c - d, by grind⟩
     omega
-  have h_coprime : Nat.Coprime (2 ^ k) (fermat_ext BASE n') := by
+  have h_coprime : Nat.Coprime (2 ^ k) (F BASE n') := by
     apply Nat.Coprime.pow_left
     exact (Nat.prime_two.coprime_iff_not_dvd).mpr hF_odd
   exact (ZMod.isUnit_iff_coprime _ _).mpr h_coprime
@@ -509,13 +503,13 @@ lemma negacyclic_recompose_eq_mul {F : ℕ} [NeZero F]
   · exact fun k hk₁ hk₂ => False.elim <| hk₁ <| Fin.ext hk₂.symm
 
 /-
-BETA'^K = -1 in ZMod (fermat_ext BASE n) when K * M = n
+BETA'^K = -1 in ZMod (F BASE n) when K * M = n
 -/
 lemma BETA'_pow_K_eq_neg_one (BASE n : ℕ) (K M : ℕ) (hKM : K * M = n) :
-    ((BASE ^ M : ℕ) : ZMod (fermat_ext BASE n)) ^ K = -1 := by
-  -- By definition of fermat_ext, we know that fermat_ext BASE n = (BASE ^ M) ^ K + 1.
-  have h_fermat_ext : fermat_ext BASE n = (BASE ^ M) ^ K + 1 := by
-    rw [ ← hKM, fermat_ext_eq_pow_pow ];
+    ((BASE ^ M : ℕ) : ZMod (F BASE n)) ^ K = -1 := by
+  -- By definition of F, we know that F BASE n = (BASE ^ M) ^ K + 1.
+  have h_F : F BASE n = (BASE ^ M) ^ K + 1 := by
+    rw [ ← hKM, F_eq_pow_pow ];
   rw [ eq_neg_iff_add_eq_zero ];
   norm_cast;
   erw [ ZMod.natCast_eq_zero_iff ] ; aesop
@@ -566,17 +560,17 @@ lemma ntt_chain_eq_negacyclic_conv_R
   exact ntt_full_chain_comm_ring OMEGA OMEGAInv THETA THETAInv k hk
     hOMEGA_half hOMEGAK hOMEGAInv hTHETAK hTHETAInv KInv hKInv aD bD j
 
--- Helper: decompose values are < fermat_ext BASE n'
+-- Helper: decompose values are < F BASE n'
 lemma decompose_lt_fermat (A BASE M K n' : ℕ)
     (hBASE_ge : 2 ≤ BASE) (hM_pos : 0 < M) (hn'_ge_M : M ≤ n')
     (hK_pos : 0 < K)
     (hA : A < (BASE^M)^K + 1)
     (l : Fin K) :
-    decompose A (BASE^M) K l < fermat_ext BASE n' := by
+    decompose A (BASE^M) K l < F BASE n' := by
   have h1 : decompose A (BASE^M) K l ≤ BASE^M :=
     decompose_digit_le A (BASE^M) K hK_pos (by positivity) hA l
   have h2 : BASE^M ≤ BASE^n' := Nat.pow_le_pow_right (by omega) hn'_ge_M
-  have h3 : BASE^n' < fermat_ext BASE n' := by unfold fermat_ext; omega
+  have h3 : BASE^n' < F BASE n' := by unfold F; omega
   omega
 
 
@@ -684,47 +678,58 @@ lemma FFT_eq_NTT_zmod {k : Nat} {F : Nat} [NeZero F]
 
 noncomputable def schonhage_strassen_FFT
 (BETA A B n : Nat)
-(hA : A < fermat_ext BETA n)
-(hB : B < fermat_ext BETA n)
+(hA : A < F BETA n)
+(hB : B < F BETA n)
 (hBETA : Even BETA)
 (hn : good_n n)
 : Nat :=
   if _hn : n < 16 then
-    (A * B) % (fermat_ext BETA n)
+    (A * B) % (F BETA n)
   else
     let k := Nat.min (Classical.choose hn) ((Nat.log 2 n) - 1)
     let K := 2 ^ k
     let M := n / K
     let BETA' := BETA ^ M
+
     have h_exists_n' : ∃ n' : Nat,
         (n' ≥ 2*M + k) ∧ (n' < n) ∧ (good_n n') ∧ (2^k ∣ n') :=
       exists_suitable_n' n hn _hn
+
     let n' := Classical.choose h_exists_n'
-    let THETA    : ZMod (fermat_ext BETA n') := (BETA : ZMod (fermat_ext BETA n')) ^ (n' / K)
-    let OMEGA    : ZMod (fermat_ext BETA n') := THETA ^ 2
-    let THETAInv : ZMod (fermat_ext BETA n') := THETA⁻¹
-    let OMEGAInv : ZMod (fermat_ext BETA n') := OMEGA⁻¹
-    let KInv     : ZMod (fermat_ext BETA n') := ((K : Nat) : ZMod (fermat_ext BETA n'))⁻¹
-    let aD : Fin K → ZMod (fermat_ext BETA n') :=
-      fun j => ((decompose A BETA' K j : Nat) : ZMod (fermat_ext BETA n'))
-    let bD : Fin K → ZMod (fermat_ext BETA n') :=
-      fun j => ((decompose B BETA' K j : Nat) : ZMod (fermat_ext BETA n'))
-    let aT : Fin K → ZMod (fermat_ext BETA n') := fun j => aD j * THETA ^ j.val
-    let bT : Fin K → ZMod (fermat_ext BETA n') := fun j => bD j * THETA ^ j.val
-    let aF : Fin K → ZMod (fermat_ext BETA n') := FFT aT OMEGA
-    let bF : Fin K → ZMod (fermat_ext BETA n') := FFT bT OMEGA
+
+    let THETA    : ZMod (F BETA n') := (BETA : ZMod (F BETA n')) ^ (n' / K)
+    let OMEGA    : ZMod (F BETA n') := THETA ^ 2
+    let THETAInv : ZMod (F BETA n') := THETA⁻¹
+    let OMEGAInv : ZMod (F BETA n') := OMEGA⁻¹
+    let KInv     : ZMod (F BETA n') := ((K : Nat) : ZMod (F BETA n'))⁻¹
+
+    let aD : Fin K → ZMod (F BETA n') :=
+      fun j => ((decompose A BETA' K j : Nat) : ZMod (F BETA n'))
+    let bD : Fin K → ZMod (F BETA n') :=
+      fun j => ((decompose B BETA' K j : Nat) : ZMod (F BETA n'))
+
+    let aT : Fin K → ZMod (F BETA n') := fun j => aD j * THETA ^ j.val
+    let bT : Fin K → ZMod (F BETA n') := fun j => bD j * THETA ^ j.val
+
+    let aF : Fin K → ZMod (F BETA n') := FFT aT OMEGA
+    let bF : Fin K → ZMod (F BETA n') := FFT bT OMEGA
+
     have h_good_n' : good_n n' := by grind
-    have hA' : ∀ j, (aF j).val < fermat_ext BETA n' := fun j => ZMod.val_lt _
-    have hB' : ∀ j, (bF j).val < fermat_ext BETA n' := fun j => ZMod.val_lt _
-    let cF : Fin K → ZMod (fermat_ext BETA n') := fun j =>
+
+    have hA' : ∀ j, (aF j).val < F BETA n' := fun j => ZMod.val_lt _
+    have hB' : ∀ j, (bF j).val < F BETA n' := fun j => ZMod.val_lt _
+
+    let cF : Fin K → ZMod (F BETA n') := fun j =>
       ((schonhage_strassen_FFT BETA (aF j).val (bF j).val n'
-         (hA' j) (hB' j) hBETA h_good_n' : Nat) : ZMod (fermat_ext BETA n'))
-    let cB : Fin K → ZMod (fermat_ext BETA n') := FFT cF OMEGAInv
-    let cFinZ : Fin K → ZMod (fermat_ext BETA n') := fun j =>
+         (hA' j) (hB' j) hBETA h_good_n' : Nat) : ZMod (F BETA n'))
+
+    let cB : Fin K → ZMod (F BETA n') := FFT cF OMEGAInv
+    let cFinZ : Fin K → ZMod (F BETA n') := fun j =>
       cB j * KInv * THETAInv ^ j.val
+
     let cFin : Fin K → Int := fun j =>
       sign_recover (cFinZ j) (Int.ofNat (j.val + 1) * (BETA' : Int) ^ 2)
-    let result : ZMod (fermat_ext BETA n) := recompose_zmod cFin BETA'
+    let result : ZMod (F BETA n) := recompose_zmod cFin BETA'
     result.val
 termination_by n
 decreasing_by
@@ -735,12 +740,12 @@ decreasing_by
 lemma ih_gives_product_fft (BASE n n' : ℕ) (hBASE : Even BASE)
     (hn'_good : good_n n') (hn'_lt : n' < n)
     (ih : ∀ m, m < n → ∀ A B, ∀ hnk : good_n m,
-      ∀ hA : A < fermat_ext BASE m, ∀ hB : B < fermat_ext BASE m,
+      ∀ hA : A < F BASE m, ∀ hB : B < F BASE m,
       schonhage_strassen_FFT BASE A B m hA hB hBASE hnk =
-        (A * B) % fermat_ext BASE m)
-    (a b : ZMod (fermat_ext BASE n')) :
+        (A * B) % F BASE m)
+    (a b : ZMod (F BASE n')) :
     ((schonhage_strassen_FFT BASE a.val b.val n'
-      (ZMod.val_lt a) (ZMod.val_lt b) hBASE hn'_good : ℕ) : ZMod (fermat_ext BASE n')) =
+      (ZMod.val_lt a) (ZMod.val_lt b) hBASE hn'_good : ℕ) : ZMod (F BASE n')) =
     a * b := by
   rw [ih n' hn'_lt]
   rw [ZMod.natCast_mod, Nat.cast_mul, zmod_natCast_val_eq, zmod_natCast_val_eq]
@@ -765,18 +770,18 @@ lemma omega_inv_half_eq_neg_one {F : Nat} [NeZero F]
 lemma schonhage_strassen_FFT_recursive
     (BASE : ℕ) (hBASE : Even BASE) (hBASE_ge : 2 ≤ BASE)
     (n : ℕ) (h_large : ¬ n < 16) (A B : ℕ) (hnk : good_n n)
-    (hA : A < fermat_ext BASE n) (hB : B < fermat_ext BASE n)
+    (hA : A < F BASE n) (hB : B < F BASE n)
     (ih : ∀ m, m < n → ∀ A B, ∀ hnk : good_n m,
-      ∀ hA : A < fermat_ext BASE m, ∀ hB : B < fermat_ext BASE m,
+      ∀ hA : A < F BASE m, ∀ hB : B < F BASE m,
       schonhage_strassen_FFT BASE A B m hA hB hBASE hnk =
-        (A * B) % fermat_ext BASE m) :
+        (A * B) % F BASE m) :
     schonhage_strassen_FFT BASE A B n hA hB hBASE hnk =
-      (A * B) % fermat_ext BASE n := by
+      (A * B) % F BASE n := by
   set output := schonhage_strassen_FFT BASE A B n hA hB hBASE hnk with output_def
   rw [schonhage_strassen_FFT.eq_1, dif_neg h_large] at output_def
-  have h_lt : output < fermat_ext BASE n := by rw [output_def]; exact ZMod.val_lt _
-  have h_zmod : (output : ZMod (fermat_ext BASE n)) =
-      ((A * B : ℕ) : ZMod (fermat_ext BASE n)) := by
+  have h_lt : output < F BASE n := by rw [output_def]; exact ZMod.val_lt _
+  have h_zmod : (output : ZMod (F BASE n)) =
+      ((A * B : ℕ) : ZMod (F BASE n)) := by
     rw [output_def]
     simp only [zmod_natCast_val_eq]
     set k := (Classical.choose hnk).min (Nat.log 2 n - 1) with k_def
@@ -798,10 +803,10 @@ lemma schonhage_strassen_FFT_recursive
     have hn'_good : good_n n' := hn'_spec.2.2.1
     have hn'_Kdvd : K ∣ n' := hn'_spec.2.2.2
     have hn'_pos : 0 < n' := by omega
-    have hBETA'_neg : (BETA' : ZMod (fermat_ext BASE n)) ^ K = -1 :=
+    have hBETA'_neg : (BETA' : ZMod (F BASE n)) ^ K = -1 :=
       BETA'_pow_K_eq_neg_one BASE n K M hKM
     -- OMEGA conditions
-    set THETA_v := (BASE : ZMod (fermat_ext BASE n')) ^ (n' / K) with THETA_def
+    set THETA_v := (BASE : ZMod (F BASE n')) ^ (n' / K) with THETA_def
     set OMEGA_v := THETA_v ^ 2 with OMEGA_def
     have hTHETA_K : THETA_v ^ K = -1 :=
       theta_pow_K_eq_neg_one BASE n' K (by positivity) hn'_Kdvd
@@ -820,17 +825,17 @@ lemma schonhage_strassen_FFT_recursive
       ZMod.mul_inv_of_unit _ hOMEGA_unit
     have hTHETA_inv : THETA_v * THETA_v⁻¹ = 1 :=
       ZMod.mul_inv_of_unit _ hTHETA_unit
-    have hKInv : (2 ^ k : ℕ) • ((↑K : ZMod (fermat_ext BASE n'))⁻¹) = 1 := by
+    have hKInv : (2 ^ k : ℕ) • ((↑K : ZMod (F BASE n'))⁻¹) = 1 := by
       rw [nsmul_eq_mul]
       exact ZMod.mul_inv_of_unit _ (K_isUnit_zmod BASE n' k hBASE hn'_pos)
     -- OMEGAInv half condition
     have hOMEGAInv_half : OMEGA_v⁻¹ ^ (2 ^ (k - 1)) = -1 :=
       omega_inv_half_eq_neg_one OMEGA_v k hk_pos hOMEGA_half hOMEGA_unit
     -- KEY: FFT = NTT_zmod for forward and inverse transforms
-    have h_fft_fwd : ∀ (y : Fin K → ZMod (fermat_ext BASE n')),
+    have h_fft_fwd : ∀ (y : Fin K → ZMod (F BASE n')),
         FFT y OMEGA_v = NTT_zmod y OMEGA_v :=
       fun y => FFT_eq_NTT_zmod y OMEGA_v hk_pos hOMEGA_half
-    have h_fft_inv : ∀ (y : Fin K → ZMod (fermat_ext BASE n')),
+    have h_fft_inv : ∀ (y : Fin K → ZMod (F BASE n')),
         FFT y OMEGA_v⁻¹ = NTT_zmod y OMEGA_v⁻¹ :=
       fun y => FFT_eq_NTT_zmod y OMEGA_v⁻¹ hk_pos hOMEGAInv_half
     -- Step 1: negacyclic recomposition = A * B
@@ -838,7 +843,7 @@ lemma schonhage_strassen_FFT_recursive
         (recompose_zmod (negacyclic_conv K
           (fun j => (decompose A BETA' K j : ℤ))
           (fun j => (decompose B BETA' K j : ℤ))) BETA'
-        : ZMod (fermat_ext BASE n)) = ↑(A * B) := by
+        : ZMod (F BASE n)) = ↑(A * B) := by
       rw [negacyclic_recompose_eq_mul K (by positivity) BETA' hBETA'_neg]
       unfold recompose_zmod
       rw [decompose_sum_zmod A BETA' K (by positivity)]
@@ -852,7 +857,7 @@ lemma schonhage_strassen_FFT_recursive
     unfold sign_recover
     simp only []
     apply correction_exact
-    · exact_mod_cast fermat_ext_pos BASE n'
+    · exact_mod_cast F_pos BASE n'
     · exact Int.ofNat_nonneg _
     · grind
     · -- F' | (cj - neg_conv_j)  (congruence)
@@ -864,11 +869,11 @@ lemma schonhage_strassen_FFT_recursive
       have hcF_eq : ∀ i : Fin K,
         (fun j : Fin K =>
           ((schonhage_strassen_FFT BASE
-            ((FFT (fun j => (↑(decompose A BETA' K j) : ZMod (fermat_ext BASE n')) * THETA_v ^ j.val) OMEGA_v) j).val
-            ((FFT (fun j => (↑(decompose B BETA' K j) : ZMod (fermat_ext BASE n')) * THETA_v ^ j.val) OMEGA_v) j).val
-            n' (ZMod.val_lt _) (ZMod.val_lt _) hBASE hn'_good : Nat) : ZMod (fermat_ext BASE n'))) i =
-        (NTT_zmod (fun j => (↑(decompose A BETA' K j) : ZMod (fermat_ext BASE n')) * THETA_v ^ j.val) OMEGA_v i) *
-        (NTT_zmod (fun j => (↑(decompose B BETA' K j) : ZMod (fermat_ext BASE n')) * THETA_v ^ j.val) OMEGA_v i) := by
+            ((FFT (fun j => (↑(decompose A BETA' K j) : ZMod (F BASE n')) * THETA_v ^ j.val) OMEGA_v) j).val
+            ((FFT (fun j => (↑(decompose B BETA' K j) : ZMod (F BASE n')) * THETA_v ^ j.val) OMEGA_v) j).val
+            n' (ZMod.val_lt _) (ZMod.val_lt _) hBASE hn'_good : Nat) : ZMod (F BASE n'))) i =
+        (NTT_zmod (fun j => (↑(decompose A BETA' K j) : ZMod (F BASE n')) * THETA_v ^ j.val) OMEGA_v i) *
+        (NTT_zmod (fun j => (↑(decompose B BETA' K j) : ZMod (F BASE n')) * THETA_v ^ j.val) OMEGA_v i) := by
         intro i
         rw [h_fft_fwd, h_fft_fwd]
         exact ih_gives_product_fft BASE n n' hBASE hn'_good hn'_lt ih _ _
@@ -878,56 +883,56 @@ lemma schonhage_strassen_FFT_recursive
       -- After rewriting FFT to NTT_zmod, this becomes the NTT inverse
       -- Which combined with the forward NTT chain gives negacyclic conv
       have h_chain := ntt_chain_eq_negacyclic_conv_R OMEGA_v OMEGA_v⁻¹ THETA_v THETA_v⁻¹
-        ((↑K : ZMod (fermat_ext BASE n'))⁻¹) k hk_pos
+        ((↑K : ZMod (F BASE n'))⁻¹) k hk_pos
         hOMEGA_half hOMEGA_K hOMEGA_inv hTHETA_K hTHETA_inv hKInv
-        (fun l => ((↑(decompose A BETA' K l) : ZMod (fermat_ext BASE n'))))
-        (fun l => ((↑(decompose B BETA' K l) : ZMod (fermat_ext BASE n'))))
+        (fun l => ((↑(decompose A BETA' K l) : ZMod (F BASE n'))))
+        (fun l => ((↑(decompose B BETA' K l) : ZMod (F BASE n'))))
         (fun i =>
           ((schonhage_strassen_FFT BASE
-            ((FFT (fun j => (↑(decompose A BETA' K j) : ZMod (fermat_ext BASE n')) * THETA_v ^ j.val) OMEGA_v) i).val
-            ((FFT (fun j => (↑(decompose B BETA' K j) : ZMod (fermat_ext BASE n')) * THETA_v ^ j.val) OMEGA_v) i).val
-            n' (ZMod.val_lt _) (ZMod.val_lt _) hBASE hn'_good : Nat) : ZMod (fermat_ext BASE n')))
+            ((FFT (fun j => (↑(decompose A BETA' K j) : ZMod (F BASE n')) * THETA_v ^ j.val) OMEGA_v) i).val
+            ((FFT (fun j => (↑(decompose B BETA' K j) : ZMod (F BASE n')) * THETA_v ^ j.val) OMEGA_v) i).val
+            n' (ZMod.val_lt _) (ZMod.val_lt _) hBASE hn'_good : Nat) : ZMod (F BASE n')))
         hcF_eq j
       -- h_chain says: NTT_zmod cF OMEGAInv j * KInv * THETAInv^j = negacyclic_conv_R ...
       -- But the algorithm uses FFT cF OMEGAInv, which equals NTT_zmod cF OMEGAInv
       rw [show FFT
         (fun i =>
           ((schonhage_strassen_FFT BASE
-            ((FFT (fun j => (↑(decompose A BETA' K j) : ZMod (fermat_ext BASE n')) * THETA_v ^ j.val) OMEGA_v) i).val
-            ((FFT (fun j => (↑(decompose B BETA' K j) : ZMod (fermat_ext BASE n')) * THETA_v ^ j.val) OMEGA_v) i).val
-            n' (ZMod.val_lt _) (ZMod.val_lt _) hBASE hn'_good : Nat) : ZMod (fermat_ext BASE n')))
+            ((FFT (fun j => (↑(decompose A BETA' K j) : ZMod (F BASE n')) * THETA_v ^ j.val) OMEGA_v) i).val
+            ((FFT (fun j => (↑(decompose B BETA' K j) : ZMod (F BASE n')) * THETA_v ^ j.val) OMEGA_v) i).val
+            n' (ZMod.val_lt _) (ZMod.val_lt _) hBASE hn'_good : Nat) : ZMod (F BASE n')))
         OMEGA_v⁻¹ = NTT_zmod _ OMEGA_v⁻¹ from h_fft_inv _]
       exact h_chain.trans (by
-        have hFn_eq : fermat_ext BASE n = BETA' ^ K + 1 := by rw [← hKM, fermat_ext_eq_pow_pow]
-        have h_dA : ∀ l : Fin K, decompose A BETA' K l < fermat_ext BASE n' :=
+        have hFn_eq : F BASE n = BETA' ^ K + 1 := by rw [← hKM, F_eq_pow_pow]
+        have h_dA : ∀ l : Fin K, decompose A BETA' K l < F BASE n' :=
           fun l => decompose_lt_fermat _ BASE M K n' hBASE_ge hM_pos (by omega) (by positivity) (hFn_eq ▸ hA) l
-        have h_dB : ∀ l : Fin K, decompose B BETA' K l < fermat_ext BASE n' :=
+        have h_dB : ∀ l : Fin K, decompose B BETA' K l < F BASE n' :=
           fun l => decompose_lt_fermat _ BASE M K n' hBASE_ge hM_pos (by omega) (by positivity) (hFn_eq ▸ hB) l
         show negacyclic_conv_R K
-          (fun l => ((↑(decompose A BETA' K l) : ZMod (fermat_ext BASE n'))))
-          (fun l => ((↑(decompose B BETA' K l) : ZMod (fermat_ext BASE n')))) j =
-          ((↑neg_conv_j : ℤ) : ZMod (fermat_ext BASE n'))
+          (fun l => ((↑(decompose A BETA' K l) : ZMod (F BASE n'))))
+          (fun l => ((↑(decompose B BETA' K l) : ZMod (F BASE n')))) j =
+          ((↑neg_conv_j : ℤ) : ZMod (F BASE n'))
         rw [neg_conv_j_def, ← negacyclic_conv_cast_eq]
         simp_rw [show ∀ l : Fin K,
-          ((↑(decompose A BETA' K l) : ZMod (fermat_ext BASE n')).val : ℤ) =
+          ((↑(decompose A BETA' K l) : ZMod (F BASE n')).val : ℤ) =
           ↑(decompose A BETA' K l) from
           fun l => congr_arg _ (ZMod.val_natCast_of_lt (h_dA l))]
         simp_rw [show ∀ l : Fin K,
-          ((↑(decompose B BETA' K l) : ZMod (fermat_ext BASE n')).val : ℤ) =
+          ((↑(decompose B BETA' K l) : ZMod (F BASE n')).val : ℤ) =
           ↑(decompose B BETA' K l) from
           fun l => congr_arg _ (ZMod.val_natCast_of_lt (h_dB l))])
     · -- neg_conv_j < threshold  (upper bound)
       simp only [← BETA'_def, ← n'_def, ← K_def, ← M_def, ← k_def] at *
       rw [neg_conv_j_def]
-      have hFn_eq : fermat_ext BASE n = BETA' ^ K + 1 := by rw [← hKM, fermat_ext_eq_pow_pow]
+      have hFn_eq : F BASE n = BETA' ^ K + 1 := by rw [← hKM, F_eq_pow_pow]
       exact negacyclic_decompose_strict_pos_bound A B BETA' K hK_gt
         (by positivity) (hFn_eq ▸ hA) (hFn_eq ▸ hB) j
     · -- -(F' - threshold) < neg_conv_j  (lower bound)
       simp only [← BETA'_def, ← n'_def, ← K_def, ← M_def, ← k_def] at *
       rw [neg_conv_j_def]
-      have hF'_gt : (↑K : ℤ) * (↑BETA') ^ 2 < ↑(fermat_ext BASE n') := by
-        exact_mod_cast fermat_ext_gt_K_mul_sq BASE k M n' hBASE_ge hM_pos hn'_ge
-      have hFn_eq : fermat_ext BASE n = BETA' ^ K + 1 := by rw [← hKM, fermat_ext_eq_pow_pow]
+      have hF'_gt : (↑K : ℤ) * (↑BETA') ^ 2 < ↑(F BASE n') := by
+        exact_mod_cast F_gt_K_mul_sq BASE k M n' hBASE_ge hM_pos hn'_ge
+      have hFn_eq : F BASE n = BETA' ^ K + 1 := by rw [← hKM, F_eq_pow_pow]
       apply h_neg_helper K (↑BETA') _ j hF'_gt
       exact negacyclic_coeff_neg_bound K (by positivity)
         (fun j => ↑(decompose A BETA' K j)) (fun j => ↑(decompose B BETA' K j))
@@ -939,12 +944,12 @@ lemma schonhage_strassen_FFT_recursive
         j
     · exact mul_nonneg (Int.natCast_nonneg _) (sq_nonneg _)
     · simp only [← BETA'_def, ← n'_def, ← K_def, ← M_def, ← k_def] at *
-      have hF'_gt := fermat_ext_gt_K_mul_sq BASE k M n' hBASE_ge hM_pos hn'_ge
+      have hF'_gt := F_gt_K_mul_sq BASE k M n' hBASE_ge hM_pos hn'_ge
       have hj_le_K := Nat.succ_le_of_lt j.isLt
       have h1 : (j.val + 1) * BETA' ^ 2 ≤ K * BETA' ^ 2 :=
         Nat.mul_le_mul_right _ hj_le_K
-      have h2 : K * BETA' ^ 2 < fermat_ext BASE n' := hF'_gt
-      have h3 : (j.val + 1) * BETA' ^ 2 ≤ fermat_ext BASE n' := le_of_lt (lt_of_le_of_lt h1 h2)
+      have h2 : K * BETA' ^ 2 < F BASE n' := hF'_gt
+      have h3 : (j.val + 1) * BETA' ^ 2 ≤ F BASE n' := le_of_lt (lt_of_le_of_lt h1 h2)
       zify at h3 ⊢
       simp only [Int.ofNat_eq_coe, Nat.cast_add, Nat.cast_one, Nat.cast_mul] at *
       linarith
@@ -959,29 +964,29 @@ theorem schonhage_strassen_FFT_correct_aux
     (BASE : Nat) (hBASE : Even BASE) :
     ∀ n, ∀ A B,
     ∀ (hnk : good_n n),
-    ∀ (hA : A < fermat_ext BASE n),
-    ∀ (hB : B < fermat_ext BASE n),
+    ∀ (hA : A < F BASE n),
+    ∀ (hB : B < F BASE n),
     schonhage_strassen_FFT BASE A B n hA hB hBASE hnk =
-      (A * B) % (fermat_ext BASE n) := by
-  -- General bound: the output is always < fermat_ext
-  have h_output_lt : ∀ BETA' A' B' n' (hA' : A' < fermat_ext BETA' n') (hB' : B' < fermat_ext BETA' n')
+      (A * B) % (F BASE n) := by
+  -- General bound: the output is always < F
+  have h_output_lt : ∀ BETA' A' B' n' (hA' : A' < F BETA' n') (hB' : B' < F BETA' n')
       (hBASE' : Even BETA') (hnk' : good_n n'),
-      schonhage_strassen_FFT BETA' A' B' n' hA' hB' hBASE' hnk' < fermat_ext BETA' n' := by
+      schonhage_strassen_FFT BETA' A' B' n' hA' hB' hBASE' hnk' < F BETA' n' := by
     intro BETA' A' B' n' hA' hB' hBASE' hnk'
     rw [schonhage_strassen_FFT.eq_1]
     split
-    · exact Nat.mod_lt _ (fermat_ext_pos _ _)
+    · exact Nat.mod_lt _ (F_pos _ _)
     · exact ZMod.val_lt _
   rcases Nat.eq_zero_or_pos BASE with rfl | hBASE_pos
-  · -- BASE = 0 case: for n ≥ 1, fermat_ext 0 n = 0^n + 1 = 1, so A = 0, B = 0
+  · -- BASE = 0 case: for n ≥ 1, F 0 n = 0^n + 1 = 1, so A = 0, B = 0
     intro n A B hnk hA hB
     rcases n with _ | n
-    · -- n = 0: fermat_ext 0 0 = 2
+    · -- n = 0: F 0 0 = 2
       unfold schonhage_strassen_FFT; simp [show (0 : Nat) < 16 from by omega]
-    · -- n ≥ 1: fermat_ext 0 (n+1) = 1, so both output and (A*B)%1 are 0
-      have hF : fermat_ext 0 (n + 1) = 1 := by unfold fermat_ext; simp
+    · -- n ≥ 1: F 0 (n+1) = 1, so both output and (A*B)%1 are 0
+      have hF : F 0 (n + 1) = 1 := by unfold F; simp
       have h1 := h_output_lt 0 A B (n+1) hA hB hBASE hnk
-      have h2 : (A * B) % fermat_ext 0 (n+1) < fermat_ext 0 (n+1) := Nat.mod_lt _ (fermat_ext_pos _ _)
+      have h2 : (A * B) % F 0 (n+1) < F 0 (n+1) := Nat.mod_lt _ (F_pos _ _)
       omega
   · have hBASE_ge : 2 ≤ BASE := by obtain ⟨k, hk⟩ := hBASE; omega
     intro n
@@ -996,7 +1001,7 @@ theorem schonhage_strassen_FFT_correct
     (BASE A B n : Nat)
     (hBASE : Even BASE)
     (hnk : ∃ k : Nat, 2 ≤ k ∧ 2 ^ k ∣ n)
-    (hA : A < fermat_ext BASE n) (hB : B < fermat_ext BASE n) :
+    (hA : A < F BASE n) (hB : B < F BASE n) :
     schonhage_strassen_FFT BASE A B n hA hB hBASE hnk =
-      (A * B) % (fermat_ext BASE n) :=
+      (A * B) % (F BASE n) :=
   schonhage_strassen_FFT_correct_aux BASE hBASE n A B hnk hA hB
